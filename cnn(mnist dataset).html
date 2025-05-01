@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+	<pre>
+		
+CNN
+
+import tensorflow as tf
+from tensorflow.keras import layers,models
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+import matplotlib.pyplot as plt
+
+(train_images,train_labels),(test_images,test_labels)=tf.keras.datasets.mnist.load_data()
+
+train_images=train_images/255.0
+test_images=test_images/255.0
+
+train_images=np.expand_dims(train_images,-1)
+test_imges=np.expand_dims(test_images,-1)
+
+train_labels=tf.keras.utils.to_categorical(train_labels,10)
+test_labels=tf.keras.utils.to_categorical(test_labels,10)
+
+print(train_images.shape)
+print(train_labels.shape)
+print(test_images.shape)
+print(test_labels.shape)
+
+from tensorflow.keras import models, layers
+
+model = models.Sequential([
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Flatten(),
+    layers.Dense(128, activation='relu'),
+    layers.Dense(10, activation='softmax')
+])
+
+
+model.compile(optimizer='adam',loss='categorical_crossentropy',metrics=['accuracy'])
+
+model.summary()
+
+history=model.fit(train_images,train_labels,epochs=5,batch_size=64,validation_split=0.2)
+
+from sklearn.metrics import confusion_matrix,classification_report
+import seaborn as sns
+
+test_loss,test_acc=model.evaluate(test_images,test_labels)
+print(f"Test Accuracy: {test_acc*100:.2f}%")
+
+test_predictions=model.predict(test_images)
+test_predictions=np.argmax(test_predictions,axis=1)
+test_labels_actual=np.argmax(test_labels,axis=1)
+conf_matrix=confusion_matrix(test_labels_actual,test_predictions)
+plt.figure(figsize=(10,7))
+sns.heatmap(conf_matrix,annot=True,fmt='d',cmap='Blues',xticklabels=range(10),yticklabels=range(10))
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.title('Confusion Matrix')
+plt.show()
+
+	</pre>
+
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+	<pre>
+ResNet & DenseNet
+
+import tensorflow as tf
+import tensorflow_datasets as tfds
+import matplotlib.pyplot as plt
+from ast import Num
+(ds_train, ds_val), ds_info = tfds.load(
+    'plant_village',
+    split=['train[:80%]', 'train[80%:]'],
+    shuffle_files=True,
+    as_supervised=True,
+    with_info=True
+)
+
+# Image preprocessing resize + normalize + one-hot label
+IMG_SIZE = (224, 224)
+BATCH_SIZE = 32
+AUTOTUNE = tf.data.AUTOTUNE
+NUM_CLASSES = ds_info.features['label'].num_classes
+
+def preprocess(image, label):
+  image = tf.image.resize(image, IMG_SIZE)
+  image = tf.cast(image, tf.float32) / 255.0
+  label = tf.one_hot(label, NUM_CLASSES)
+  return image, label
+
+train_ds = ds_train.map(preprocess).batch(BATCH_SIZE).prefetch(AUTOTUNE)
+val_ds = ds_val.map(preprocess).batch(BATCH_SIZE).prefetch(AUTOTUNE)
+
+
+def build_resnet_model():
+  base_model = tf.keras.applications.ResNet50(
+      include_top=False,
+      weights='imagenet',
+      input_shape=(224 ,224, 3)
+  )
+  base_model.trainable = False
+
+  model=tf.keras.Sequential([
+      base_model,
+      tf.keras.layers.GlobalAveragePooling2D(),
+      tf.keras.layers.Dense(512, activation='relu'),
+      tf.keras.layers.Dropout(0.5),
+      tf.keras.layers.Dense(NUM_CLASSES, activation='softmax')
+  ])
+  return model
+
+resnet_model = build_resnet_model()
+resnet_model.compile(optimizer="adam", loss='categorical_crossentropy', metrics=['accuracy'])
+resnet_model.summary()
+
+def build_densenet_model():
+  base_model = tf.keras.applications.DenseNet121(
+      include_top=False,
+      weights='imagenet',
+      input_shape=(224, 224, 3)
+  )
+
+  base_model.trainable = False
+
+  model = tf.keras.Sequential([
+      base_model,
+      tf.keras.layers.GlobalAveragePooling2D(),
+      tf.keras.layers.Dense(512, activation='relu'),
+      tf.keras.layers.Dropout(0.5),
+      tf.keras.layers.Dense(NUM_CLASSES, activation='softmax')
+  ])
+  return model
+
+densenet_model = build_densenet_model()
+densenet_model.compile(optimizer='adam', loss="categorical_crossentropy", metrics=['accuracy'])
+densenet_model.summary()
+
+history_resnet = resnet_model.fit(
+    train_ds,
+    validation_data=val_ds,
+    epochs=10
+)
+
+history_densenet = densenet_model.fit(
+    train_ds,
+    validation_data=val_ds,
+    epochs = 10
+)
+
+def plot_history(history, title):
+  plt.plot(history.history['accuracy'], label='Train Accuracy')
+  plt.plot(history.history['val_accuracy'], label = 'Validation Accuracy')
+  plt.xlabel('Epoch')
+  plt.ylabel('Accuracy')
+  plt.legend()
+  plt.title(title)
+  plt.grid(True)
+  plt.show()
+
+plot_history(history_resnet, 'ResNet50 Model Training History')
+plot_history(history_densenet, 'DenseNet121 Model Training History')
+
+
+
+
+	</pre>
+
+</body>
+</html>

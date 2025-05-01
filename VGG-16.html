@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+	<pre>
+		
+
+VGG-16
+
+import tensorflow as tf
+from tensorflow.keras import layers,models,optimizers
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import matplotlib.pyplot as plt
+!pip install tensorflow-datasets
+import tensorflow_datasets as tfds
+
+(ds_train, ds_test), ds_info = tfds.load(
+    'plant_village',
+    split=['train[:80%]','train[80%:]'],
+    shuffle_files=True,
+    as_supervised=True,
+    with_info=True,
+)
+
+IMG_SIZE=(224,224)
+BATCH_SIZE=32
+AUTOTUNE=tf.data.AUTOTUNE
+NUM_CLASSES=ds_info.features['label'].num_classes
+
+def preprocess_image(image, label):
+  image = tf.image.resize(image, IMG_SIZE)
+  image = tf.cast(image, tf.float32) / 255.0
+  return image,tf.one_hot(label,depth=ds_info.features['label'].num_classes)
+
+train_dataset=ds_train.map(preprocess_image).batch(BATCH_SIZE).prefetch(AUTOTUNE)
+test_dataset=ds_test.map(preprocess_image).batch(BATCH_SIZE).prefetch(AUTOTUNE)
+
+def build_vgg16(input_shape=(224,224,3),num_classes=NUM_CLASSES,dropout_rate=0.5):
+  model=tf.keras.Sequential([
+
+        tf.keras.layers.Conv2D(64,(3,3),padding='same',activation='relu',input_shape=input_shape),
+        tf.keras.layers.Conv2D(64,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.MaxPooling2D(pool_size=(2,2),strides=2),
+
+        tf.keras.layers.Conv2D(128,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.Conv2D(128,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.MaxPooling2D(pool_size=(2,2),strides=2),
+
+        tf.keras.layers.Conv2D(256,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.Conv2D(256,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.Conv2D(256,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.MaxPooling2D(pool_size=(2,2),strides=2),
+
+        tf.keras.layers.Conv2D(512,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.Conv2D(512,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.Conv2D(512,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.MaxPooling2D(pool_size=(2,2),strides=2),
+
+        tf.keras.layers.Conv2D(512,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.Conv2D(512,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.Conv2D(512,(3,3),padding='same',activation='relu'),
+        tf.keras.layers.MaxPooling2D(pool_size=(2,2),strides=2),
+
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(4096,activation='relu'),
+        tf.keras.layers.Dropout(dropout_rate),
+        tf.keras.layers.Dense(4096,activation='relu'),
+        tf.keras.layers.Dropout(dropout_rate),
+        tf.keras.layers.Dense(num_classes, activation='softmax')
+    ])
+  return model
+vgg_model=build_vgg16()
+vgg_model.summary()
+
+vgg_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
+                  loss='categorical_crossentropy',
+                  metrics=['accuracy'])
+
+EPOCHS=20
+
+history = vgg_model.fit(
+    train_dataset,
+    epochs=EPOCHS,
+    validation_data = test_dataset
+)
+
+plt.figure(figsize=(10, 5))
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show('VGG-16 on PlantVillage Accuracy')
+plt.grid(True)
+plt.show()
+
+
+	</pre>
+
+</body>
+</html>

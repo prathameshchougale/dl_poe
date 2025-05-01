@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+	<pre>
+		
+Alexnet(Plant village Dataset)
+import tensorflow as tf
+from tensorflow.keras import layers,models,optimizers
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import matplotlib.pyplot as plt
+
+import tensorflow_datasets as tfds
+
+dataset, info = tfds.load('plant_village', with_info=True, as_supervised=True)
+
+train_dataset = dataset['train'].take(int(0.8*info.splits['train'].num_examples))
+val_dataset=dataset['train'].take(int(0.8*info.splits['train'].num_examples))
+
+(ds_train, ds_test), ds_info = tfds.load(
+    'plant_village',
+    split=['train[:80%]','train[80%:]'],
+    shuffle_files=True,
+    as_supervised=True,
+    with_info=True,
+)
+
+IMG_SIZE=(227,227)
+BATCH_SIZE=32
+AUTOTUNE=tf.data.AUTOTUNE
+
+def preprocess_image(image, label):
+  image = tf.image.resize(image, IMG_SIZE)
+  image = tf.cast(image, tf.float32) / 255.0
+  return image,tf.one_hot(label,depth=ds_info.features['label'].num_classes)
+
+train_dataset=ds_train.map(preprocess_image,num_parallel_calls=AUTOTUNE).batch(BATCH_SIZE).prefetch(AUTOTUNE)
+val_dataset=ds_test.map(preprocess_image,num_parallel_calls=AUTOTUNE).batch(BATCH_SIZE).prefetch(AUTOTUNE)
+NUM_CLASSES=ds_info.features['label'].num_classes
+
+def build_alexnet(input_shape=(227,227,3),num_classes=NUM_CLASSES,dropout_rate=0.5):
+    model=tf.keras.Sequential([
+        tf.keras.layers.Conv2D(filters=96,kernel_size=(11,11),strides=(4,4),activation='relu',input_shape=input_shape),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.MaxPool2D(pool_size=(3,3),strides=(2,2)),
+
+        tf.keras.layers.Conv2D(filters=256,kernel_size=(5,5),strides=(1,1),activation='relu',padding="same"),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.MaxPool2D(pool_size=(3,3),strides=(2,2)),
+
+        tf.keras.layers.Conv2D(filters=384,kernel_size=(3,3),strides=(1,1),activation='relu',padding="same"),
+        tf.keras.layers.Conv2D(filters=384,kernel_size=(3,3),strides=(1,1),activation='relu',padding="same"),
+        tf.keras.layers.Conv2D(filters=256,kernel_size=(3,3),strides=(1,1),activation='relu',padding="same"),
+        tf.keras.layers.MaxPooling2D(pool_size=(3,3),strides=2),
+
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(4096,activation='relu'),
+        tf.keras.layers.Dropout(dropout_rate),
+        tf.keras.layers.Dense(4096,activation='relu'),
+        tf.keras.layers.Dropout(dropout_rate),
+        tf.keras.layers.Dense(num_classes, activation='softmax')
+    ])
+    return model
+
+model = build_alexnet()
+model.summary()
+
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+EPOCHS=20
+
+history = model.fit(
+    train_dataset,
+    epochs=EPOCHS,
+    validation_data=val_dataset
+)
+
+plt.figure(figsize=(10, 5))
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show('AlexNet on PlantVillage Accuracy')
+plt.grid(True)
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+		
+	</pre>
+
+</body>
+</html>
