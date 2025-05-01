@@ -14,22 +14,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-
+		
 data=pd.read_csv('/content/assignment-111520-104638-67ac18bb12de3.csv')
-
 print(data.head(5))
-
+		
 data.info()
-
+		
 data.isnull().sum()
-
+		
 plt.figure(figsize=(10,8))
 sns.heatmap(data.corr(),annot=True,cmap='coolwarm')
 plt.show()
-
+		
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-
 for column in data.columns:
   if column=='BMI':
     data.loc[data[column]==0,column]=data[column].mean()
@@ -37,42 +35,41 @@ for column in data.columns:
 
 y=data['Outcome']
 x=data.drop('Outcome',axis=1)
-
+		
 x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=42)
-
+		
 scaler=StandardScaler()
 x_train=scaler.fit_transform(x_train)
 x_test=scaler.transform(x_test)
+		
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
-
+		
 model=Sequential()
 model.add(Dense(128,activation='relu',input_shape=(x_train.shape[1],)))
 model.add(Dense(64,activation='relu'))
 model.add(Dense(32,activation='relu'))
 model.add(Dense(1,activation='sigmoid'))
-
-model.compile(optimizer=Adam(learning_rate=0.001),loss='mse',metrics=['mae'])
-
+		
+model.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+		
 history=model.fit(x_train,y_train,validation_data=(x_test,y_test),epochs=100,batch_size=32)
-
+		
 plt.figure(figsize=(10,5))
-plt.plot(history.history['mae'],label='Train MAE')
-plt.plot(history.history['val_mae'],label='Validation MAE')
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.legend()
 plt.xlabel('Epochs')
-plt.ylabel('MAE')
+plt.ylabel('Accuracy')
 plt.show()
-
+		
 y_pred=model.predict(x_test)
 
-plt.figsize=(8,6)
-plt.scatter(y_test,y_pred)
-plt.xlabel('Actual Outcome')
-plt.ylabel('Predicted Outcome')
-plt.title('Actual vs Predicted Outcomes')
-plt.show()
+y_pred_class = (y_pred > 0.5).astype(int)
+print(confusion_matrix(y_test, y_pred_class))
+print(classification_report(y_test, y_pred_class))
+
 
 
 	</pre>
