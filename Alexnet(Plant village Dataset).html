@@ -16,10 +16,7 @@ import matplotlib.pyplot as plt
 
 import tensorflow_datasets as tfds
 
-dataset, info = tfds.load('plant_village', with_info=True, as_supervised=True)
 
-train_dataset = dataset['train'].take(int(0.8*info.splits['train'].num_examples))
-val_dataset=dataset['train'].take(int(0.8*info.splits['train'].num_examples))
 
 (ds_train, ds_test), ds_info = tfds.load(
     'plant_village',
